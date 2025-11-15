@@ -14,7 +14,7 @@ export async function runDailyMaintenance(rhizomeClient: any): Promise<void> {
   const pacingEngine = new PacingEngine(client);
 
   // Query all active users
-  const activeUsers = await client.rhizome.queryActiveUsers();
+  const activeUsers = await client.queryActiveUsers();
 
   console.log(`Running daily maintenance for ${activeUsers.length} users`);
 

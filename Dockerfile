@@ -10,7 +10,13 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+# Note: If pnpm-lock.yaml doesn't exist, remove --frozen-lockfile flag
+# Also ensure loveops-world-model is available (published to npm or via workspace)
+RUN if [ -f pnpm-lock.yaml ]; then \
+      pnpm install --frozen-lockfile; \
+    else \
+      pnpm install; \
+    fi
 
 # Copy source files
 COPY tsconfig.json ./
@@ -32,7 +38,11 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+RUN if [ -f pnpm-lock.yaml ]; then \
+      pnpm install --frozen-lockfile --prod; \
+    else \
+      pnpm install --prod; \
+    fi
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist

@@ -33,6 +33,16 @@ export class LoveopsRhizomeClient {
     return this.rhizome.queryCandidateUsers(userId);
   }
 
+  async queryUsersNeedingMatches(): Promise<string[]> {
+    // Expose rhizome method for workflows
+    return this.rhizome.queryUsersNeedingMatches();
+  }
+
+  async queryActiveUsers(): Promise<string[]> {
+    // Expose rhizome method for workflows
+    return this.rhizome.queryActiveUsers();
+  }
+
   async evalView<TState>(
     viewName: keyof typeof viewRegistry,
     events: FactEvent[],

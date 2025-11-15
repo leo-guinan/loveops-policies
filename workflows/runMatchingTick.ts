@@ -17,7 +17,7 @@ export async function runMatchingTick(
   // If specific users provided, process only those
   // Otherwise, query for users who need matches
   const usersToProcess =
-    userIds || (await client.rhizome.queryUsersNeedingMatches());
+    userIds || (await client.queryUsersNeedingMatches());
 
   console.log(`Running matching tick for ${usersToProcess.length} users`);
 

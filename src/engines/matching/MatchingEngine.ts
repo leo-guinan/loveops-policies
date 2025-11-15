@@ -3,6 +3,7 @@ import {
   DatingEventType,
   createDatingEvent,
   FactEvent,
+  EmotionalLoadState,
 } from "loveops-world-model";
 import { LoveopsRhizomeClient } from "../../adapters/rhizome/LoveopsRhizomeClient";
 import { MatchRecommendation } from "../../types/policy";
@@ -21,7 +22,10 @@ export class MatchingEngine {
       "UserProfileStateView",
       userEvents
     );
-    const emoState = await this.client.evalView("EmotionalLoadView", userEvents);
+    const emoState: EmotionalLoadState = await this.client.evalView(
+      "EmotionalLoadView",
+      userEvents
+    );
 
     // 2. choose candidate pool (pseudo-code: probably another query)
     const candidates = await this.client.queryCandidateUsers(userId);
