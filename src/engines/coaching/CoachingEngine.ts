@@ -50,13 +50,16 @@ export class CoachingEngine {
     });
 
     // 5. Create event for the suggestion
+    // Note: Using SYSTEM event type since MESSAGE_SUGGESTION_GENERATED doesn't exist
+    // Adjust based on available event types in loveops-world-model
     const event = createDatingEvent({
       source: "system:coaching",
       actorId: senderId,
       targetId: recipientId,
-      domain: "coaching",
-      type: DatingEventType.MESSAGE_SUGGESTION_GENERATED,
+      domain: "system",
+      type: DatingEventType.SYSTEM_EVENT,
       payload: {
+        eventType: "message_suggestion_generated",
         matchId,
         suggestion: suggestion.text,
         tone: suggestion.tone,

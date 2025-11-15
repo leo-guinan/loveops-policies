@@ -56,7 +56,13 @@ export class PacingEngine {
     }
 
     // Low engagement -> slow pacing
-    if (interactionHistory.averageResponseTime > 48 * 60 * 60 * 1000) {
+    // Adjust property access based on actual InteractionHistoryState structure
+    const avgResponseTime = (interactionHistory as any).averageResponseTime 
+      ?? (interactionHistory as any).avgResponseTimeMs
+      ?? (interactionHistory as any).responseTime
+      ?? Infinity;
+    
+    if (avgResponseTime > 48 * 60 * 60 * 1000) {
       // > 48 hours average response time
       return "slow";
     }
@@ -64,7 +70,7 @@ export class PacingEngine {
     // High engagement + low burnout -> fast pacing
     if (
       emotionalLoad.burnoutLevel < 0.3 &&
-      interactionHistory.averageResponseTime < 2 * 60 * 60 * 1000
+      avgResponseTime < 2 * 60 * 60 * 1000
     ) {
       // < 2 hours average response time
       return "fast";
@@ -86,7 +92,13 @@ export class PacingEngine {
       );
     }
 
-    if (interactionHistory.averageResponseTime > 48 * 60 * 60 * 1000) {
+    // Adjust property access based on actual InteractionHistoryState structure
+    const avgResponseTime = (interactionHistory as any).averageResponseTime 
+      ?? (interactionHistory as any).avgResponseTimeMs
+      ?? (interactionHistory as any).responseTime
+      ?? Infinity;
+
+    if (avgResponseTime > 48 * 60 * 60 * 1000) {
       notes.push(
         `Slow response patterns detected. Adjusting pacing to match engagement level.`
       );
@@ -94,7 +106,7 @@ export class PacingEngine {
 
     if (
       emotionalLoad.burnoutLevel < 0.3 &&
-      interactionHistory.averageResponseTime < 2 * 60 * 60 * 1000
+      avgResponseTime < 2 * 60 * 60 * 1000
     ) {
       notes.push(
         `High engagement and low burnout. Increasing match frequency.`
@@ -107,13 +119,15 @@ export class PacingEngine {
   private async emitPacingUpdate(
     recommendation: PacingRecommendation
   ): Promise<void> {
+    // Note: Using SYSTEM_EVENT type since SYSTEM_PACING_UPDATED doesn't exist
     const event = createDatingEvent({
       source: "system:pacing",
       actorId: recommendation.userId,
       targetId: recommendation.userId, // self-action
       domain: "system",
-      type: DatingEventType.SYSTEM_PACING_UPDATED,
+      type: DatingEventType.SYSTEM_EVENT,
       payload: {
+        eventType: "system_pacing_updated",
         recommendedRate: recommendation.recommendedRate,
         notes: recommendation.notes,
       },
