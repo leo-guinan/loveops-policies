@@ -119,21 +119,25 @@ export class PacingEngine {
   private async emitPacingUpdate(
     recommendation: PacingRecommendation
   ): Promise<void> {
-    // Note: Using SYSTEM_EVENT type since SYSTEM_PACING_UPDATED doesn't exist
-    const event = createDatingEvent({
-      source: "system:pacing",
-      actorId: recommendation.userId,
-      targetId: recommendation.userId, // self-action
-      domain: "system",
-      type: DatingEventType.SYSTEM_EVENT,
-      payload: {
-        eventType: "system_pacing_updated",
-        recommendedRate: recommendation.recommendedRate,
-        notes: recommendation.notes,
-      },
-    });
-
-    await this.client.appendEvents([event]);
+    // Note: No event type exists for pacing updates in DatingEventType
+    // If pacing recommendation is based on burnout, we can emit BURNOUT_STATE_REPORTED
+    // Otherwise, pacing recommendations can be stored/queried separately
+    // For now, we'll skip event emission - adjust based on your needs
+    
+    // If you want to track burnout-related pacing changes, you could do:
+    // const event = createDatingEvent({
+    //   source: "system:pacing",
+    //   actorId: recommendation.userId,
+    //   targetId: recommendation.userId,
+    //   domain: "feedback",
+    //   type: DatingEventType.BURNOUT_STATE_REPORTED,
+    //   payload: {
+    //     userId: recommendation.userId,
+    //     burnoutLevel: /* calculate from emotional load */,
+    //     reason: recommendation.notes,
+    //   },
+    // });
+    // await this.client.appendEvents([event]);
   }
 }
 

@@ -49,25 +49,10 @@ export class CoachingEngine {
       emotionalLoad,
     });
 
-    // 5. Create event for the suggestion
-    // Note: Using SYSTEM event type since MESSAGE_SUGGESTION_GENERATED doesn't exist
-    // Adjust based on available event types in loveops-world-model
-    const event = createDatingEvent({
-      source: "system:coaching",
-      actorId: senderId,
-      targetId: recipientId,
-      domain: "system",
-      type: DatingEventType.SYSTEM_EVENT,
-      payload: {
-        eventType: "message_suggestion_generated",
-        matchId,
-        suggestion: suggestion.text,
-        tone: suggestion.tone,
-        rationale: suggestion.rationale,
-      },
-    });
-
-    await this.client.appendEvents([event]);
+    // 5. Note: No event type exists for message suggestions in DatingEventType
+    // The suggestion is returned to the caller who can handle it appropriately
+    // If you need to track suggestions, consider storing them separately or
+    // extending the event type enum in loveops-world-model
 
     return {
       matchId,
@@ -84,12 +69,12 @@ export class CoachingEngine {
     timestamp: Date;
   }> {
     // Extract message events from the event log
-    // This is pseudo-code - actual implementation depends on event structure
+    // MessageSentPayload uses 'content' not 'text'
     return events
       .filter((e) => e.type === DatingEventType.MESSAGE_SENT)
       .map((e) => ({
         senderId: e.actorId,
-        text: e.payload?.text || "",
+        text: e.payload?.content || e.payload?.text || "",
         timestamp: new Date(e.timestamp),
       }))
       .slice(-10); // Last 10 messages

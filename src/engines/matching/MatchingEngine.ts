@@ -61,20 +61,25 @@ export class MatchingEngine {
     const recs = await this.recommendForUser(userId);
     const selected = recs.slice(0, topN);
 
-    const events = selected.map((rec) =>
-      createDatingEvent({
+    const events = selected.map((rec) => {
+      // Generate matchId - in production, this might come from your match service
+      const matchId = `${userId}_${rec.candidateId}_${Date.now()}`;
+      
+      return createDatingEvent({
         source: "system:matchmaker",
         actorId: userId,
         targetId: rec.candidateId,
         domain: "match",
         type: DatingEventType.MATCH_CREATED,
         payload: {
-          score: rec.compatibility.compatibilityScore,
-          axes: rec.compatibility.axes,
-          explanationVector: rec.compatibility.explanation,
+          matchId,
+          userA: userId,
+          userB: rec.candidateId,
+          // Store compatibility metadata separately if needed
+          // The payload structure matches MatchCreatedPayload type
         },
-      })
-    );
+      });
+    });
 
     await this.client.appendEvents(events);
     return selected;

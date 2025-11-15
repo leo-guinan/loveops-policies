@@ -39,16 +39,14 @@ export class SafetyEngine {
   }
 
   async applySafetyAction(action: SafetyAction): Promise<void> {
-    // Convert SafetyAction to event
-    // Note: Using SAFETY domain and SYSTEM_EVENT type since MODERATION_ACTION_TAKEN doesn't exist
+    // Convert SafetyAction to event using MODERATION_ACTION_TAKEN
     const event = createDatingEvent({
       source: "system:safety",
       actorId: action.userId,
       targetId: action.userId, // self-action
       domain: "safety",
-      type: DatingEventType.SYSTEM_EVENT,
+      type: DatingEventType.MODERATION_ACTION_TAKEN,
       payload: {
-        eventType: "moderation_action_taken",
         action: action.action,
         reason: action.reason,
       },
