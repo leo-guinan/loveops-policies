@@ -12,5 +12,4 @@ README.md
 coverage
 *.test.ts
 *.spec.ts
-tsconfig.json
 
