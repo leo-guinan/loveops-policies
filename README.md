@@ -1,10 +1,10 @@
 # LoveOps Policies
 
-Policy engines and workflows for the LoveOps matching system. This package provides matching, coaching, safety, and pacing engines that operate on event-sourced data via the Rhizome adapter.
+**Library package** providing policy engines and workflows for the LoveOps matching system. This package is embedded **in-process** within `loveops-world-model` and `loveops-views` services, not deployed as a separate service.
 
 ## Overview
 
-This package implements the policy layer for LoveOps, which:
+This library implements the policy layer for LoveOps, which:
 - **Matches users** based on compatibility states and emotional load
 - **Coaches users** by generating message suggestions via LLM
 - **Enforces safety** by evaluating trust/safety states and applying moderation actions
@@ -14,24 +14,28 @@ All engines operate on event-sourced data through the `loveops-world-model` pack
 
 ## Architecture
 
+This is a **library package** used by:
+- **loveops-world-model**: Uses policy library for event processing logic
+- **loveops-views**: Uses policy library for matching and coaching logic (processes `loveops-policy-matching` and `loveops-policy-coaching` queues)
+
+The library is installed as a dependency and used **in-process** within these services. Queue processing happens in-process using the `QueueProcessor` helper in each service.
+
+### Component Structure
+
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   Workflows                              │
-│  ┌──────────────────┐  ┌─────────────────────────────┐  │
-│  │ runMatchingTick  │  │ runDailyMaintenance        │  │
-│  └────────┬─────────┘  └────────────┬──────────────┘  │
-└───────────┼──────────────────────────┼──────────────────┘
-            │                          │
-            ▼                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                    Engines                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ Matching     │  │ Coaching     │  │ Safety       │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘ │
-│         │                  │                  │         │
-│  ┌──────┴──────────────────┴──────────────────┴───────┐ │
-│  │              Pacing Engine                          │ │
-│  └────────────────────────────────────────────────────┘ │
+│              Services (loveops-views, world-model)       │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  Queue Processors (in-process)                    │  │
+│  │  ┌──────────────┐  ┌──────────────┐              │  │
+│  │  │ Matching     │  │ Coaching     │              │  │
+│  │  │ Engine       │  │ Engine       │              │  │
+│  │  └──────┬───────┘  └──────┬───────┘              │  │
+│  │         │                  │                       │  │
+│  │  ┌──────┴──────────────────┴───────────────────┐ │  │
+│  │  │  Safety & Pacing Engines                    │ │  │
+│  │  └────────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────────┘  │
 └───────────────────────┬──────────────────────────────────┘
                         │
             ┌───────────┴───────────┐
@@ -146,7 +150,7 @@ const coachingEngine = new CoachingEngine(rhizomeClient, llmClient);
    - `UserProfileStateView`
    - `EmotionalLoadView`
    - `MatchCompatibilityView`
-   - `TrustSafetyStateView`
+   - `TrustSafetyView`
    - `InteractionHistoryView`
 3. **Policy Engines**: Each engine:
    - Loads relevant events
@@ -154,48 +158,68 @@ const coachingEngine = new CoachingEngine(rhizomeClient, llmClient);
    - Makes decisions based on state
    - Emits new events back to the log
 
-### Workflow Integration
+### Using in Services
 
-#### Matching Tick (`runMatchingTick`)
+This library is embedded **in-process** within services. Services import and use engines/workflows directly:
 
-Runs periodically (e.g., hourly) to create new matches:
+#### In loveops-views Service
+
+Processes `loveops-policy-matching` and `loveops-policy-coaching` queues:
 
 ```typescript
-import { runMatchingTick } from "loveops-policies/workflows";
+import { MatchingEngine, CoachingEngine, runMatchingTick } from "loveops-policies";
+import { QueueProcessor } from "./queue-processor";
 
-// Run for all users needing matches
+class ViewsQueueProcessor extends QueueProcessor {
+  protected async processJob(queueName: string, job: Job): Promise<boolean> {
+    const rhizomeClient = this.getRhizomeClient();
+    const client = new LoveopsRhizomeClient(rhizomeClient);
+    
+    if (queueName === "loveops-policy-matching") {
+      const matchingEngine = new MatchingEngine(client);
+      const userId = job.payload.userId;
+      await matchingEngine.createMatchEvents(userId, 3);
+      return true;
+    }
+    
+    if (queueName === "loveops-policy-coaching") {
+      const llmClient = this.getLlmClient();
+      const coachingEngine = new CoachingEngine(client, llmClient);
+      const { matchId, senderId, recipientId } = job.payload;
+      await coachingEngine.generateMessageSuggestion(matchId, senderId, recipientId);
+      return true;
+    }
+    
+    return false;
+  }
+}
+```
+
+#### In loveops-world-model Service
+
+Uses policy library for event processing:
+
+```typescript
+import { SafetyEngine, PacingEngine, runDailyMaintenance } from "loveops-policies";
+
+// Use engines directly for event processing logic
+const safetyEngine = new SafetyEngine(rhizomeClient);
+const action = await safetyEngine.evaluateUserSafety(userId);
+```
+
+### Workflow Functions
+
+Workflows can be called directly or used in queue processors:
+
+```typescript
+import { runMatchingTick, runDailyMaintenance } from "loveops-policies";
+
+// Run matching tick (e.g., from scheduled job or queue processor)
 await runMatchingTick(rhizomeClient);
 
-// Or run for specific users
-await runMatchingTick(rhizomeClient, ["user1", "user2"]);
-```
-
-**What it does:**
-1. Queries users who need new matches
-2. For each user:
-   - Evaluates their emotional load state
-   - Finds candidate matches
-   - Calculates compatibility for each candidate
-   - Filters out marginal matches if user has high burnout
-   - Creates top 3 matches and emits `MATCH_CREATED` events
-
-#### Daily Maintenance (`runDailyMaintenance`)
-
-Runs daily to evaluate safety and update pacing:
-
-```typescript
-import { runDailyMaintenance } from "loveops-policies/workflows";
-
+// Run daily maintenance
 await runDailyMaintenance(rhizomeClient);
 ```
-
-**What it does:**
-1. Queries all active users
-2. For each user:
-   - Evaluates trust/safety state
-   - Applies safety actions if needed (ban, warn, limit matches, etc.)
-   - Updates pacing recommendation based on emotional load and interaction history
-   - Emits `MODERATION_ACTION_TAKEN` and `SYSTEM_PACING_UPDATED` events
 
 ### Engine Usage
 
@@ -277,45 +301,30 @@ Engines depend on these world views from `loveops-world-model`:
 
 Ensure your `loveops-world-model` package provides these views.
 
+## Installation
+
+Install as a dependency in your service:
+
+```bash
+pnpm add loveops-policies
+# or
+npm install loveops-policies
+```
+
 ## Docker Usage
 
-This package is a library, not a standalone application. The Docker container builds the package, but you need to override the CMD to run workflows.
+This package is a **library**, not a standalone service. The Dockerfile is provided for building the package, but in production this library is embedded within `loveops-world-model` and `loveops-views` services.
 
-### Building the Image
+### Building the Package
 
 ```bash
 docker build -t loveops-policies .
 ```
 
-### Running Workflows
-
-Since this is a library package, you have a few options:
-
-**Option 1: Use as a library in another service**
-```bash
-# Import and use in your own Node.js service
-import { MatchingEngine, runMatchingTick } from "loveops-policies";
-```
-
-**Option 2: Override CMD to run workflows directly**
-```bash
-# Run matching tick (requires rhizome client setup)
-docker run loveops-policies node -e "
-  const { runMatchingTick } = require('./dist/workflows/runMatchingTick');
-  const rhizomeClient = /* your client */;
-  runMatchingTick(rhizomeClient).catch(console.error);
-"
-
-# Run daily maintenance
-docker run loveops-policies node -e "
-  const { runDailyMaintenance } = require('./dist/workflows/runDailyMaintenance');
-  const rhizomeClient = /* your client */;
-  runDailyMaintenance(rhizomeClient).catch(console.error);
-"
-```
-
-**Option 3: Create your own entry point script**
-Create a script that imports and calls the workflows with your rhizome client configuration, then override CMD to run that script.
+The built package can then be:
+- Published to npm for use as a dependency
+- Used as a local dependency in a monorepo
+- Copied into service containers that need it
 
 ## Development
 
@@ -345,10 +354,11 @@ import {
 
 ## Notes
 
-- All engines are stateless and operate purely on events
-- State is always derived from events, never stored
-- Engines can be run independently or via workflows
-- The system is designed to be horizontally scalable (each engine instance is independent)
+- **Library Package**: This is not a standalone service - it's embedded in-process within other services
+- **Stateless**: All engines are stateless and operate purely on events
+- **Event-Driven**: State is always derived from events, never stored
+- **In-Process Processing**: Queue processing happens in-process within services, not in separate worker containers
+- **Reusable**: Engines can be imported and used directly in any service that needs policy logic
 
 ## Release Process
 

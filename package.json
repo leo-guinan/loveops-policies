@@ -1,7 +1,7 @@
 {
   "name": "loveops-policies",
   "version": "0.1.0",
-  "description": "Policy engines and workflows for LoveOps matching system",
+  "description": "Library package providing policy engines (matching, coaching, safety, pacing) for LoveOps. Embedded in-process within loveops-world-model and loveops-views services.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
