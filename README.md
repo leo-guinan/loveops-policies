@@ -277,6 +277,46 @@ Engines depend on these world views from `loveops-world-model`:
 
 Ensure your `loveops-world-model` package provides these views.
 
+## Docker Usage
+
+This package is a library, not a standalone application. The Docker container builds the package, but you need to override the CMD to run workflows.
+
+### Building the Image
+
+```bash
+docker build -t loveops-policies .
+```
+
+### Running Workflows
+
+Since this is a library package, you have a few options:
+
+**Option 1: Use as a library in another service**
+```bash
+# Import and use in your own Node.js service
+import { MatchingEngine, runMatchingTick } from "loveops-policies";
+```
+
+**Option 2: Override CMD to run workflows directly**
+```bash
+# Run matching tick (requires rhizome client setup)
+docker run loveops-policies node -e "
+  const { runMatchingTick } = require('./dist/workflows/runMatchingTick');
+  const rhizomeClient = /* your client */;
+  runMatchingTick(rhizomeClient).catch(console.error);
+"
+
+# Run daily maintenance
+docker run loveops-policies node -e "
+  const { runDailyMaintenance } = require('./dist/workflows/runDailyMaintenance');
+  const rhizomeClient = /* your client */;
+  runDailyMaintenance(rhizomeClient).catch(console.error);
+"
+```
+
+**Option 3: Create your own entry point script**
+Create a script that imports and calls the workflows with your rhizome client configuration, then override CMD to run that script.
+
 ## Development
 
 ```bash
@@ -309,4 +349,18 @@ import {
 - State is always derived from events, never stored
 - Engines can be run independently or via workflows
 - The system is designed to be horizontally scalable (each engine instance is independent)
+
+## Release Process
+
+This package uses [Changesets](https://github.com/changesets/changesets) for version management. See [RELEASE.md](./RELEASE.md) for detailed release instructions.
+
+### Quick Release Guide
+
+1. Make your changes
+2. Create a changeset: `pnpm changeset`
+3. Commit and push
+4. Merge PR to `main`
+5. Release happens automatically via GitHub Actions
+
+For more details, see [RELEASE.md](./RELEASE.md).
 

@@ -8,7 +8,23 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
+    "prepublishOnly": "pnpm build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leo-guinan/loveops-policies.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +33,7 @@
     "loveops-world-model": "https://github.com/leo-guinan/loveops-world-model"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.1",
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
   },

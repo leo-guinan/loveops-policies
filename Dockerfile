@@ -50,6 +50,8 @@ COPY --from=builder /app/dist ./dist
 # Set NODE_ENV
 ENV NODE_ENV=production
 
-# Default command (can be overridden)
-CMD ["node", "dist/index.js"]
+# Default command - override this when running the container
+# Example: docker run ... node dist/workflows/runMatchingTick.js
+# Or use the CLI: docker run ... node dist/cli.js matching-tick
+CMD ["node", "--version"]
 

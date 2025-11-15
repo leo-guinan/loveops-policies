@@ -1,0 +1,36 @@
+# Source files
+src/
+workflows/
+tsconfig.json
+
+# Development files
+*.test.ts
+*.spec.ts
+.env
+.env.local
+
+# Build artifacts (keep dist/)
+*.log
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+
+# Documentation (optional - you might want to include README)
+# README.md
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Changesets
+.changeset/
+
+# IDE
+.vscode/
+.idea/
+
